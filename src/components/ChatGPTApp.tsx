@@ -10,6 +10,13 @@ import SettingsModal from './SettingsModal';
 import { MODELS, DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { Chat, Message, Attachment, Model } from '../types';
 import { ArrowDown } from 'lucide-react';
+import { isFirebaseConfigured } from '../lib/firebase';
+import {
+  loadChatsFromFirestore,
+  saveChatToFirestore,
+  deleteChatFromFirestore,
+  clearAllChatsFromFirestore,
+} from '../lib/firestore';
 
 export default function ChatGPTApp() {
   // Local storage keys
@@ -55,6 +62,7 @@ export default function ChatGPTApp() {
         if (parsed.maxTokens !== undefined) setMaxTokens(parsed.maxTokens);
       }
 
+      // First check localStorage for immediate render
       const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
       if (savedChats) {
         const parsedChats = JSON.parse(savedChats);
@@ -63,8 +71,23 @@ export default function ChatGPTApp() {
           setActiveChatId(parsedChats[0].id);
         }
       }
+
+      // Then load from Firestore if configured
+      if (isFirebaseConfigured) {
+        loadChatsFromFirestore()
+          .then((firestoreChats) => {
+            if (firestoreChats && firestoreChats.length > 0) {
+              setChats(firestoreChats);
+              setActiveChatId((prev) => {
+                const stillExists = firestoreChats.some((c) => c.id === prev);
+                return stillExists ? prev : firestoreChats[0].id;
+              });
+            }
+          })
+          .catch((err) => console.warn('Could not load chats from Firestore:', err));
+      }
     } catch (e) {
-      console.error('Error loading data from localStorage:', e);
+      console.error('Error loading data from storage:', e);
     }
     setIsClientLoaded(true);
   }, []);
@@ -159,6 +182,7 @@ export default function ChatGPTApp() {
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
+    saveChatToFirestore(newChat);
   };
 
   // Delete a chat
@@ -168,19 +192,34 @@ export default function ChatGPTApp() {
       const remaining = chats.filter((c) => c.id !== chatId);
       setActiveChatId(remaining.length > 0 ? remaining[0].id : null);
     }
+    deleteChatFromFirestore(chatId);
   };
 
   // Rename a chat
   const handleRenameChat = (chatId: string, newTitle: string) => {
     setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, title: newTitle } : c))
+      prev.map((c) => {
+        if (c.id === chatId) {
+          const updated = { ...c, title: newTitle, updatedAt: new Date().toISOString() };
+          saveChatToFirestore(updated);
+          return updated;
+        }
+        return c;
+      })
     );
   };
 
   // Toggle Pin chat
   const handleTogglePin = (chatId: string) => {
     setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, pinned: !c.pinned } : c))
+      prev.map((c) => {
+        if (c.id === chatId) {
+          const updated = { ...c, pinned: !c.pinned };
+          saveChatToFirestore(updated);
+          return updated;
+        }
+        return c;
+      })
     );
   };
 
@@ -251,18 +290,17 @@ export default function ChatGPTApp() {
       ? content.slice(0, 36) + (content.length > 36 ? '...' : '')
       : currentChat.title;
 
+    const updatedChatObj: Chat = {
+      ...currentChat,
+      title: newTitle,
+      updatedAt: new Date().toISOString(),
+      messages: updatedMessages,
+    };
+
     setChats((prev) =>
-      prev.map((c) =>
-        c.id === targetChatId
-          ? {
-              ...c,
-              title: newTitle,
-              updatedAt: new Date().toISOString(),
-              messages: updatedMessages,
-            }
-          : c
-      )
+      prev.map((c) => (c.id === targetChatId ? updatedChatObj : c))
     );
+    saveChatToFirestore(updatedChatObj);
 
     setIsStreaming(true);
     setTimeout(() => scrollToBottom('smooth'), 50);
@@ -430,6 +468,14 @@ export default function ChatGPTApp() {
     } finally {
       setIsStreaming(false);
       abortControllerRef.current = null;
+      // Persist the finalized conversation to Firestore
+      setChats((current) => {
+        const completed = current.find((c) => c.id === targetChatId);
+        if (completed) {
+          saveChatToFirestore(completed);
+        }
+        return current;
+      });
     }
   };
 
@@ -495,6 +541,7 @@ export default function ChatGPTApp() {
 
   // Clear all chats
   const handleClearAllChats = () => {
+    clearAllChatsFromFirestore(chats);
     setChats([]);
     setActiveChatId(null);
   };
@@ -595,6 +642,7 @@ export default function ChatGPTApp() {
         onSaveMaxTokens={setMaxTokens}
         onClearAllChats={handleClearAllChats}
         onExportChats={handleExportChats}
+        isFirebaseConfigured={isFirebaseConfigured}
       />
     </div>
   );

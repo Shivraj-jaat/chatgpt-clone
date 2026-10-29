@@ -10,7 +10,8 @@ import {
   Check, 
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Database
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -26,6 +27,7 @@ interface SettingsModalProps {
   onSaveMaxTokens: (tokens: number) => void;
   onClearAllChats: () => void;
   onExportChats: () => void;
+  isFirebaseConfigured?: boolean;
 }
 
 export default function SettingsModal({
@@ -41,6 +43,7 @@ export default function SettingsModal({
   onSaveMaxTokens,
   onClearAllChats,
   onExportChats,
+  isFirebaseConfigured = false,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<'general' | 'model' | 'data'>('general');
   const [keyInput, setKeyInput] = useState(apiKey || '');
@@ -272,6 +275,30 @@ export default function SettingsModal({
           {/* DATA CONTROLS TAB */}
           {activeTab === 'data' && (
             <div className="space-y-4">
+              {/* Database Sync Status Card */}
+              <div className="p-4 rounded-xl bg-[#282828] border border-[#383838]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-[#10a37f]" />
+                    <h4 className="text-sm font-medium text-[#ececec]">Cloud Database</h4>
+                  </div>
+                  <span
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${
+                      isFirebaseConfigured
+                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800'
+                        : 'bg-amber-950/80 text-amber-400 border border-amber-800'
+                    }`}
+                  >
+                    {isFirebaseConfigured ? 'Firestore Active' : 'LocalStorage Fallback'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#8e8e8e]">
+                  {isFirebaseConfigured
+                    ? 'All chats are safely synchronized with Google Firebase Firestore in real-time.'
+                    : 'Chats are stored in your browser. Add your Firebase keys in .env to sync chats across devices.'}
+                </p>
+              </div>
+
               <div className="flex items-center justify-between p-4 rounded-xl bg-[#282828] border border-[#383838]">
                 <div>
                   <h4 className="text-sm font-medium text-[#ececec]">Export Conversations</h4>
