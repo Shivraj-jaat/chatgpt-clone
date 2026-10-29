@@ -62,29 +62,26 @@ export default function ChatGPTApp() {
         if (parsed.maxTokens !== undefined) setMaxTokens(parsed.maxTokens);
       }
 
-      // First check localStorage for immediate render
-      const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
-      if (savedChats) {
-        const parsedChats = JSON.parse(savedChats);
-        if (Array.isArray(parsedChats) && parsedChats.length > 0) {
-          setChats(parsedChats);
-          setActiveChatId(parsedChats[0].id);
-        }
-      }
-
-      // Then load from Firestore if configured
+      // Load chats: Priority to Firebase Firestore
       if (isFirebaseConfigured) {
         loadChatsFromFirestore()
           .then((firestoreChats) => {
             if (firestoreChats && firestoreChats.length > 0) {
               setChats(firestoreChats);
-              setActiveChatId((prev) => {
-                const stillExists = firestoreChats.some((c) => c.id === prev);
-                return stillExists ? prev : firestoreChats[0].id;
-              });
+              setActiveChatId(firestoreChats[0].id);
             }
           })
           .catch((err) => console.warn('Could not load chats from Firestore:', err));
+      } else {
+        // Fallback to localStorage only if Firebase credentials are not in .env yet
+        const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
+        if (savedChats) {
+          const parsedChats = JSON.parse(savedChats);
+          if (Array.isArray(parsedChats) && parsedChats.length > 0) {
+            setChats(parsedChats);
+            setActiveChatId(parsedChats[0].id);
+          }
+        }
       }
     } catch (e) {
       console.error('Error loading data from storage:', e);
@@ -110,9 +107,9 @@ export default function ChatGPTApp() {
       .catch((err) => console.warn('Could not load dynamic models:', err));
   }, [apiKey]);
 
-  // Persist chats to localStorage
+  // Persist chats to localStorage only when Firebase is not configured
   useEffect(() => {
-    if (!isClientLoaded) return;
+    if (!isClientLoaded || isFirebaseConfigured) return;
     localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(chats));
   }, [chats, isClientLoaded]);
 
