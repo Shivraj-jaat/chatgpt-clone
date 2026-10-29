@@ -1,0 +1,36 @@
+{
+  "name": "chatgpt-groq",
+  "version": "1.0.0",
+  "description": "A high-fidelity ChatGPT clone powered by Groq LPUs, Next.js & TypeScript",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "firebase": "^13.1.0",
+    "groq-sdk": "^0.15.0",
+    "katex": "^0.16.21",
+    "lucide-react": "^1.16.0",
+    "next": "^14.2.24",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.3",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/katex": "^0.16.7",
+    "@types/node": "^20.17.14",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.3"
+  }
+}
