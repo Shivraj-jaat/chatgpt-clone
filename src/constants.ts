@@ -161,6 +161,11 @@ export const MODELS: Model[] = DEFAULT_FALLBACK_MODELS;
 
 export const PROMPT_SUGGESTIONS: PromptSuggestion[] = [
   {
+    title: 'Generate AI Image',
+    prompt: 'Generate an image of a futuristic cyberpunk city with neon lights, flying cars, and rain reflections.',
+    icon: 'sparkles'
+  },
+  {
     title: 'Code an algorithm',
     prompt: 'Write an optimized TypeScript function for finding the shortest path in a weighted graph using Dijkstra\'s algorithm, with explanatory comments and complexity analysis.',
     icon: 'code'

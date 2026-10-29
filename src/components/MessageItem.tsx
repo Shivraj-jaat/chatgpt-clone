@@ -16,7 +16,9 @@ import {
   ChevronRight, 
   Sparkles, 
   Zap,
-  FileText
+  FileText,
+  Download,
+  Image as ImageIcon
 } from 'lucide-react';
 import CodeBlock from './CodeBlock';
 import { Message } from '../types';
@@ -228,6 +230,32 @@ export default function MessageItem({
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
+                  img({ node, src, alt, ...props }: any) {
+                    return (
+                      <div className="my-4 rounded-2xl overflow-hidden border border-[#383838] bg-[#1a1a1a] shadow-xl max-w-xl group/img">
+                        <div className="relative overflow-hidden bg-[#121212] min-h-[250px] flex items-center justify-center">
+                          <img
+                            src={src}
+                            alt={alt || 'Generated image'}
+                            className="w-full h-auto object-cover rounded-t-2xl transition-transform duration-300 group-hover/img:scale-[1.01]"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="p-3 bg-[#242424] border-t border-[#383838] flex items-center justify-between gap-3 text-xs text-[#b4b4b4]">
+                          <span className="truncate font-medium text-[#ececec]">{alt || 'AI Generated Image'}</span>
+                          <a
+                            href={src}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#383838] hover:bg-[#484848] text-white font-medium text-xs transition-colors flex-shrink-0"
+                          >
+                            <Download className="w-3.5 h-3.5 text-[#10a37f]" />
+                            <span>Download / Full Size</span>
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  },
                   code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     const codeString = String(children).replace(/\n$/, '');

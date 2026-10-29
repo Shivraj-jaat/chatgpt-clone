@@ -19,6 +19,55 @@ const FALLBACK_PRIORITY = [
   'openai/gpt-oss-120b',
 ];
 
+/**
+ * Detect if user wants an AI generated image
+ */
+function detectImagePrompt(text: string): string | null {
+  if (!text) return null;
+  const t = text.trim();
+
+  // 1. Slash command
+  const slashMatch = t.match(/^\/image\s+(.+)/i);
+  if (slashMatch) return slashMatch[1].trim();
+
+  // 2. Clear image generation intent phrases
+  const regexPatterns = [
+    // "generate/create/make/draw/paint an image/picture/photo of..."
+    /(?:can\s+you\s+)?(?:please\s+)?(?:generate|create|make|draw|paint|render|design)\s+(?:an?\s+)?(?:image|picture|photo|painting|illustration|artwork|wallpaper)\s+(?:of|showing|depicting|with)?\s+(.+)/i,
+    // "show me an image/picture of..."
+    /(?:can\s+you\s+)?(?:please\s+)?(?:show\s+me)\s+(?:an?\s+)?(?:image|picture|photo)\s+(?:of|showing)?\s+(.+)/i,
+    // Direct "image/picture/photo of..."
+    /^(?:image|picture|photo|illustration|drawing)\s+of\s+(.+)/i,
+    // Hinglish: "photo banao...", "image generate karo..."
+    /(?:photo|image|picture)\s+(?:banao|generate\s+karo|create\s+karo)\s*(?:of)?\s*(.+)/i,
+    /(.+?)\s+(?:ki\s+)?(?:photo|image|picture)\s+(?:banao|dikhao|generate\s+karo)/i,
+  ];
+
+  for (const regex of regexPatterns) {
+    const match = t.match(regex);
+    if (match && match[1]) {
+      const prompt = match[1].trim();
+      const lower = prompt.toLowerCase();
+      // Filter non-image technical keywords
+      if (
+        lower.startsWith('pcb') ||
+        lower.startsWith('operating system') ||
+        lower.startsWith('code') ||
+        lower.startsWith('algorithm') ||
+        lower.startsWith('how to') ||
+        lower.startsWith('why')
+      ) {
+        continue;
+      }
+      if (prompt.length >= 3) {
+        return prompt;
+      }
+    }
+  }
+
+  return null;
+}
+
 /** Try to create a streaming completion, returning [stream, usedModelId] */
 async function createStream(
   groq: Groq,
@@ -98,6 +147,61 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Messages array is required.' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 1. Check if user is asking to generate an image
+  const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user');
+  const userText =
+    typeof lastUserMsg?.content === 'string'
+      ? lastUserMsg.content
+      : Array.isArray(lastUserMsg?.content)
+      ? lastUserMsg.content.find((p: any) => p.type === 'text')?.text || ''
+      : '';
+
+  const imagePrompt = detectImagePrompt(userText);
+
+  if (imagePrompt) {
+    const seed = Math.floor(Math.random() * 1000000);
+    const encodedPrompt = encodeURIComponent(imagePrompt);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
+
+    const responseMarkdown = `I've generated the image for you:\n\n![${imagePrompt}](${imageUrl})\n\n**Prompt:** *${imagePrompt}*`;
+
+    const encoder = new TextEncoder();
+    const customReadableStream = new ReadableStream({
+      async start(controller) {
+        const words = responseMarkdown.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          const token = words[i] + (i < words.length - 1 ? ' ' : '');
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ token })}\n\n`)
+          );
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              done: true,
+              stats: {
+                duration: '1.20',
+                tokens: words.length,
+                tps: '50.0',
+                model: 'Flux.1 (AI Image Generator)',
+              },
+            })}\n\n`
+          )
+        );
+        controller.close();
+      },
+    });
+
+    return new Response(customReadableStream, {
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+      },
     });
   }
 
