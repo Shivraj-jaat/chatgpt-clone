@@ -28,6 +28,16 @@ A high-fidelity, pixel-perfect copy of **ChatGPT** powered by **Groq LPUs (Langu
   - Tables, blockquotes, ordered/unordered lists.
   - Live performance badge showing **generation time** and **tokens per second (tps)**.
 
+- 🎨 **AI Image Generation (Flux.1)**:
+  - Built-in instant image generation directly in the conversation.
+  - Zero API key required (100% free high-res 1024x1024 images).
+  - Triggers on prompts like *"generate an image of..."*, *"draw a..."*, or `/image`.
+  - Preview card with one-click **Download / Full Size** button.
+
+- 🔥 **Cloud Sync via Firebase Firestore**:
+  - Chat history automatically synchronized across sessions and devices using Google Cloud Firestore.
+  - Automatic fallback to browser LocalStorage if Firebase credentials are not yet configured.
+
 - 🎙️ **Voice Chat (Groq Whisper)**:
   - Microphone recording in the input capsule.
   - Transcribes audio into text using Groq's `whisper-large-v3-turbo` model via `/api/transcribe`.
