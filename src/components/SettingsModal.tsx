@@ -92,55 +92,55 @@ export default function SettingsModal({
       <div className="w-full max-w-xl rounded-2xl bg-[#212121] border border-[#383838] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2f2f2f]">
-          <h2 className="text-lg font-semibold text-[#ececec]">Settings</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#2f2f2f]">
+          <h2 className="text-base sm:text-lg font-semibold text-[#ececec]">Settings</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#8e8e8e] hover:text-white hover:bg-[#2f2f2f] transition-colors"
+            className="p-1.5 rounded-lg text-[#8e8e8e] hover:text-white hover:bg-[#2f2f2f] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[#2f2f2f] px-6 text-sm">
+        <div className="flex border-b border-[#2f2f2f] px-3 sm:px-6 text-xs sm:text-sm overflow-x-auto">
           <button
             onClick={() => setActiveTab('general')}
-            className={`py-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={`py-2.5 sm:py-3 px-2.5 sm:px-3 font-medium border-b-2 transition-colors flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${
               activeTab === 'general'
                 ? 'border-[#10a37f] text-[#ececec]'
                 : 'border-transparent text-[#8e8e8e] hover:text-[#ececec]'
             }`}
           >
-            <Key className="w-4 h-4" />
+            <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>Groq API Key</span>
           </button>
           <button
             onClick={() => setActiveTab('model')}
-            className={`py-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={`py-2.5 sm:py-3 px-2.5 sm:px-3 font-medium border-b-2 transition-colors flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${
               activeTab === 'model'
                 ? 'border-[#10a37f] text-[#ececec]'
                 : 'border-transparent text-[#8e8e8e] hover:text-[#ececec]'
             }`}
           >
-            <Sliders className="w-4 h-4" />
+            <Sliders className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>Model & Prompt</span>
           </button>
           <button
             onClick={() => setActiveTab('data')}
-            className={`py-3 px-3 font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={`py-2.5 sm:py-3 px-2.5 sm:px-3 font-medium border-b-2 transition-colors flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ${
               activeTab === 'data'
                 ? 'border-[#10a37f] text-[#ececec]'
                 : 'border-transparent text-[#8e8e8e] hover:text-[#ececec]'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>Data Controls</span>
           </button>
         </div>
 
         {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
           {/* GENERAL / API KEY TAB */}
           {activeTab === 'general' && (
             <div className="space-y-4">

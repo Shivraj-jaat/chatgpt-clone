@@ -95,18 +95,18 @@ export default function MessageItem({
   };
 
   return (
-    <div className={`group py-6 px-4 md:px-6 transition-colors ${
+    <div className={`group py-4 px-3 sm:py-6 sm:px-6 transition-colors ${
       isUser ? 'bg-transparent' : 'bg-[#212121]/50 border-y border-[#2d2d2d]/30'
     }`}>
-      <div className="max-w-3xl mx-auto flex gap-4 md:gap-5">
+      <div className="max-w-3xl mx-auto flex gap-2.5 sm:gap-4 md:gap-5">
         {/* Avatar */}
         <div className="flex-shrink-0 pt-0.5">
           {isUser ? (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#3f3f46] to-[#52525b] flex items-center justify-center text-white text-xs font-semibold shadow-md border border-[#52525b]/50">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-[#3f3f46] to-[#52525b] flex items-center justify-center text-white text-xs font-semibold shadow-md border border-[#52525b]/50">
               U
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white shadow-md shadow-[#10a37f]/20">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#10a37f] flex items-center justify-center text-white shadow-md shadow-[#10a37f]/20">
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
                 <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z" />

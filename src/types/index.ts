@@ -4,6 +4,8 @@ export interface Attachment {
   data: string;
   mimeType?: string;
   size?: number;
+  originalSize?: number;
+  compressed?: boolean;
 }
 
 export interface MessageStats {
@@ -47,6 +49,15 @@ export interface Chat {
   model: string;
   messages: Message[];
   pinned?: boolean;
+  userId?: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  isAnonymous?: boolean;
 }
 
 export interface PromptSuggestion {

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { AuthProvider } from '@/context/AuthContext';
 
 const ChatGPTApp = dynamic(() => import('@/components/ChatGPTApp'), {
   ssr: false,
@@ -20,6 +21,10 @@ const ChatGPTApp = dynamic(() => import('@/components/ChatGPTApp'), {
 });
 
 export default function Home() {
-  return <ChatGPTApp />;
+  return (
+    <AuthProvider>
+      <ChatGPTApp />
+    </AuthProvider>
+  );
 }
 

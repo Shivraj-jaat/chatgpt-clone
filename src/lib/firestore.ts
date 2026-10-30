@@ -7,11 +7,11 @@ import {
   query,
   orderBy,
   writeBatch,
+  CollectionReference,
+  DocumentReference,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import { Chat } from '@/types';
-
-const CHATS_COLLECTION = 'chats';
 
 /**
  * Remove undefined values recursively before saving to Firestore,
@@ -31,13 +31,38 @@ function sanitizeForFirestore(val: any): any {
 }
 
 /**
- * Fetch all chats from Firestore ordered by updatedAt descending
+ * Get the Firestore collection reference depending on whether user is logged in
  */
-export async function loadChatsFromFirestore(): Promise<Chat[]> {
+function getChatsCollection(userId?: string | null): CollectionReference | null {
+  if (!db) return null;
+  if (userId) {
+    return collection(db, 'users', userId, 'chats');
+  }
+  return collection(db, 'chats');
+}
+
+/**
+ * Get the Firestore document reference for a chat
+ */
+function getChatDocRef(chatId: string, userId?: string | null): DocumentReference | null {
+  if (!db) return null;
+  if (userId) {
+    return doc(db, 'users', userId, 'chats', chatId);
+  }
+  return doc(db, 'chats', chatId);
+}
+
+/**
+ * Fetch all chats from Firestore ordered by updatedAt descending
+ * (scoped to user if userId is provided)
+ */
+export async function loadChatsFromFirestore(userId?: string | null): Promise<Chat[]> {
   if (!db || !isFirebaseConfigured) return [];
 
   try {
-    const chatsRef = collection(db, CHATS_COLLECTION);
+    const chatsRef = getChatsCollection(userId);
+    if (!chatsRef) return [];
+
     const q = query(chatsRef, orderBy('updatedAt', 'desc'));
     const snapshot = await getDocs(q);
 
@@ -52,6 +77,7 @@ export async function loadChatsFromFirestore(): Promise<Chat[]> {
         model: data.model || 'qwen/qwen3.8-27b',
         messages: Array.isArray(data.messages) ? data.messages : [],
         pinned: Boolean(data.pinned),
+        userId: userId || undefined,
       });
     });
 
@@ -64,13 +90,20 @@ export async function loadChatsFromFirestore(): Promise<Chat[]> {
 
 /**
  * Save or update a single chat in Firestore
+ * (scoped to user if userId is provided)
  */
-export async function saveChatToFirestore(chat: Chat): Promise<void> {
+export async function saveChatToFirestore(chat: Chat, userId?: string | null): Promise<void> {
   if (!db || !isFirebaseConfigured || !chat.id) return;
 
   try {
-    const chatDocRef = doc(db, CHATS_COLLECTION, chat.id);
-    const sanitized = sanitizeForFirestore(chat);
+    const chatDocRef = getChatDocRef(chat.id, userId);
+    if (!chatDocRef) return;
+
+    const chatToSave = {
+      ...chat,
+      userId: userId || chat.userId || null,
+    };
+    const sanitized = sanitizeForFirestore(chatToSave);
     await setDoc(chatDocRef, sanitized, { merge: true });
   } catch (error) {
     console.warn(`Firestore saveChat error for chat ${chat.id}:`, error);
@@ -80,11 +113,12 @@ export async function saveChatToFirestore(chat: Chat): Promise<void> {
 /**
  * Delete a single chat from Firestore
  */
-export async function deleteChatFromFirestore(chatId: string): Promise<void> {
+export async function deleteChatFromFirestore(chatId: string, userId?: string | null): Promise<void> {
   if (!db || !isFirebaseConfigured || !chatId) return;
 
   try {
-    const chatDocRef = doc(db, CHATS_COLLECTION, chatId);
+    const chatDocRef = getChatDocRef(chatId, userId);
+    if (!chatDocRef) return;
     await deleteDoc(chatDocRef);
   } catch (error) {
     console.warn(`Firestore deleteChat error for chat ${chatId}:`, error);
@@ -94,14 +128,16 @@ export async function deleteChatFromFirestore(chatId: string): Promise<void> {
 /**
  * Clear all chats in Firestore
  */
-export async function clearAllChatsFromFirestore(chats: Chat[]): Promise<void> {
+export async function clearAllChatsFromFirestore(chats: Chat[], userId?: string | null): Promise<void> {
   if (!db || !isFirebaseConfigured) return;
 
   try {
     const batch = writeBatch(db);
     for (const chat of chats) {
-      const chatDocRef = doc(db, CHATS_COLLECTION, chat.id);
-      batch.delete(chatDocRef);
+      const chatDocRef = getChatDocRef(chat.id, userId);
+      if (chatDocRef) {
+        batch.delete(chatDocRef);
+      }
     }
     await batch.commit();
   } catch (error) {

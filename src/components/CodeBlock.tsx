@@ -20,8 +20,8 @@ export default function CodeBlock({ language, value }: CodeBlockProps) {
   };
 
   return (
-    <div className="relative my-4 rounded-lg overflow-hidden border border-[#383838] bg-[#0d0d0d] font-mono text-sm shadow-lg">
-      <div className="flex items-center justify-between px-4 py-1.5 bg-[#1e1e1e] border-b border-[#333333] text-xs text-[#b4b4b4]">
+    <div className="relative my-3 sm:my-4 rounded-xl overflow-hidden border border-[#383838] bg-[#0d0d0d] font-mono text-xs sm:text-sm shadow-lg max-w-full">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 bg-[#1e1e1e] border-b border-[#333333] text-xs text-[#b4b4b4]">
         <span className="font-medium tracking-wide lowercase">{language || 'text'}</span>
         <button
           onClick={handleCopy}
@@ -41,8 +41,8 @@ export default function CodeBlock({ language, value }: CodeBlockProps) {
           )}
         </button>
       </div>
-      <div className="p-4 overflow-x-auto text-[#ececec] text-[13.5px] leading-relaxed">
-        <pre className="!bg-transparent !p-0 !m-0 !border-none">
+      <div className="p-3 sm:p-4 overflow-x-auto text-[#ececec] text-xs sm:text-[13.5px] leading-relaxed scrollbar-thin">
+        <pre className="!bg-transparent !p-0 !m-0 !border-none font-mono">
           <code>{value}</code>
         </pre>
       </div>

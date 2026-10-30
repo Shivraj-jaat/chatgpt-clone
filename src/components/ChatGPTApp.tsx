@@ -7,6 +7,7 @@ import MessageItem from './MessageItem';
 import ChatInput from './ChatInput';
 import EmptyState from './EmptyState';
 import SettingsModal from './SettingsModal';
+import AuthModal from './AuthModal';
 import { MODELS, DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { Chat, Message, Attachment, Model } from '../types';
 import { ArrowDown } from 'lucide-react';
@@ -17,8 +18,11 @@ import {
   deleteChatFromFirestore,
   clearAllChatsFromFirestore,
 } from '../lib/firestore';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ChatGPTApp() {
+  const { user } = useAuth();
+
   // Local storage keys
   const STORAGE_KEY_CHATS = 'chatgpt_groq_chats_v1';
   const STORAGE_KEY_API_KEY = 'chatgpt_groq_api_key';
@@ -38,8 +42,9 @@ export default function ChatGPTApp() {
   const [selectedModelId, setSelectedModelId] = useState<string>(MODELS[0].id);
 
   // UI state
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // default closed for mobile first, opens on desktop in useEffect
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [apiConnected, setApiConnected] = useState(false);
@@ -48,7 +53,23 @@ export default function ChatGPTApp() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load from localStorage on mount (prevents SSR hydration mismatch)
+  // Auto-detect responsive screen size on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isDesktop = window.innerWidth >= 768;
+      setSidebarOpen(isDesktop);
+
+      const handleResize = () => {
+        if (window.innerWidth < 768) {
+          // Keep state clean on resize
+        }
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
+  // Load settings & localStorage on mount
   useEffect(() => {
     try {
       const savedKey = localStorage.getItem(STORAGE_KEY_API_KEY) || '';
@@ -61,33 +82,55 @@ export default function ChatGPTApp() {
         if (parsed.temperature !== undefined) setTemperature(parsed.temperature);
         if (parsed.maxTokens !== undefined) setMaxTokens(parsed.maxTokens);
       }
-
-      // Load chats: Priority to Firebase Firestore
-      if (isFirebaseConfigured) {
-        loadChatsFromFirestore()
-          .then((firestoreChats) => {
-            if (firestoreChats && firestoreChats.length > 0) {
-              setChats(firestoreChats);
-              setActiveChatId(firestoreChats[0].id);
-            }
-          })
-          .catch((err) => console.warn('Could not load chats from Firestore:', err));
-      } else {
-        // Fallback to localStorage only if Firebase credentials are not in .env yet
-        const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
-        if (savedChats) {
-          const parsedChats = JSON.parse(savedChats);
-          if (Array.isArray(parsedChats) && parsedChats.length > 0) {
-            setChats(parsedChats);
-            setActiveChatId(parsedChats[0].id);
-          }
-        }
-      }
     } catch (e) {
       console.error('Error loading data from storage:', e);
     }
     setIsClientLoaded(true);
   }, []);
+
+  // Load chats based on current user / Firebase state
+  useEffect(() => {
+    if (!isClientLoaded) return;
+
+    if (isFirebaseConfigured) {
+      const currentUid = user && !user.isAnonymous ? user.uid : null;
+      loadChatsFromFirestore(currentUid)
+        .then((firestoreChats) => {
+          if (firestoreChats && firestoreChats.length > 0) {
+            setChats(firestoreChats);
+            setActiveChatId(firestoreChats[0].id);
+          } else {
+            // Check fallback localStorage if user has no chats yet
+            const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
+            if (savedChats) {
+              try {
+                const parsedChats = JSON.parse(savedChats);
+                if (Array.isArray(parsedChats) && parsedChats.length > 0) {
+                  setChats(parsedChats);
+                  setActiveChatId(parsedChats[0].id);
+                }
+              } catch {}
+            } else {
+              setChats([]);
+              setActiveChatId(null);
+            }
+          }
+        })
+        .catch((err) => console.warn('Could not load chats from Firestore:', err));
+    } else {
+      // Fallback to localStorage only if Firebase credentials are not in .env yet
+      const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
+      if (savedChats) {
+        try {
+          const parsedChats = JSON.parse(savedChats);
+          if (Array.isArray(parsedChats) && parsedChats.length > 0) {
+            setChats(parsedChats);
+            setActiveChatId(parsedChats[0].id);
+          }
+        } catch {}
+      }
+    }
+  }, [user, isClientLoaded]);
 
   // Fetch live available models for this Groq account / key
   useEffect(() => {
@@ -107,11 +150,13 @@ export default function ChatGPTApp() {
       .catch((err) => console.warn('Could not load dynamic models:', err));
   }, [apiKey]);
 
-  // Persist chats to localStorage only when Firebase is not configured
+  // Persist chats to localStorage only when Firebase is not configured or user is guest
   useEffect(() => {
-    if (!isClientLoaded || isFirebaseConfigured) return;
-    localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(chats));
-  }, [chats, isClientLoaded]);
+    if (!isClientLoaded) return;
+    if (!isFirebaseConfigured || !user || user.isAnonymous) {
+      localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(chats));
+    }
+  }, [chats, user, isClientLoaded]);
 
   // Persist settings
   useEffect(() => {
@@ -176,10 +221,11 @@ export default function ChatGPTApp() {
       updatedAt: new Date().toISOString(),
       model: selectedModelId,
       messages: [],
+      userId: user && !user.isAnonymous ? user.uid : undefined,
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
-    saveChatToFirestore(newChat);
+    saveChatToFirestore(newChat, user && !user.isAnonymous ? user.uid : null);
   };
 
   // Delete a chat
@@ -189,7 +235,7 @@ export default function ChatGPTApp() {
       const remaining = chats.filter((c) => c.id !== chatId);
       setActiveChatId(remaining.length > 0 ? remaining[0].id : null);
     }
-    deleteChatFromFirestore(chatId);
+    deleteChatFromFirestore(chatId, user && !user.isAnonymous ? user.uid : null);
   };
 
   // Rename a chat
@@ -198,7 +244,7 @@ export default function ChatGPTApp() {
       prev.map((c) => {
         if (c.id === chatId) {
           const updated = { ...c, title: newTitle, updatedAt: new Date().toISOString() };
-          saveChatToFirestore(updated);
+          saveChatToFirestore(updated, user && !user.isAnonymous ? user.uid : null);
           return updated;
         }
         return c;
@@ -212,7 +258,7 @@ export default function ChatGPTApp() {
       prev.map((c) => {
         if (c.id === chatId) {
           const updated = { ...c, pinned: !c.pinned };
-          saveChatToFirestore(updated);
+          saveChatToFirestore(updated, user && !user.isAnonymous ? user.uid : null);
           return updated;
         }
         return c;
@@ -252,6 +298,7 @@ export default function ChatGPTApp() {
         updatedAt: new Date().toISOString(),
         model: selectedModelId,
         messages: [],
+        userId: user && !user.isAnonymous ? user.uid : undefined,
       };
       setChats((prev) => [newChat, ...prev]);
       setActiveChatId(newChat.id);
@@ -292,12 +339,13 @@ export default function ChatGPTApp() {
       title: newTitle,
       updatedAt: new Date().toISOString(),
       messages: updatedMessages,
+      userId: user && !user.isAnonymous ? user.uid : currentChat.userId,
     };
 
     setChats((prev) =>
       prev.map((c) => (c.id === targetChatId ? updatedChatObj : c))
     );
-    saveChatToFirestore(updatedChatObj);
+    saveChatToFirestore(updatedChatObj, user && !user.isAnonymous ? user.uid : null);
 
     setIsStreaming(true);
     setTimeout(() => scrollToBottom('smooth'), 50);
@@ -469,7 +517,7 @@ export default function ChatGPTApp() {
       setChats((current) => {
         const completed = current.find((c) => c.id === targetChatId);
         if (completed) {
-          saveChatToFirestore(completed);
+          saveChatToFirestore(completed, user && !user.isAnonymous ? user.uid : null);
         }
         return current;
       });
@@ -538,7 +586,7 @@ export default function ChatGPTApp() {
 
   // Clear all chats
   const handleClearAllChats = () => {
-    clearAllChatsFromFirestore(chats);
+    clearAllChatsFromFirestore(chats, user && !user.isAnonymous ? user.uid : null);
     setChats([]);
     setActiveChatId(null);
   };
@@ -546,9 +594,10 @@ export default function ChatGPTApp() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#212121] text-[#ececec]">
       
-      {/* Sidebar */}
+      {/* Responsive Sidebar (Slide-out drawer on Mobile, Column on Desktop) */}
       <Sidebar
         isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         chats={chats}
         activeChatId={activeChatId}
         onSelectChat={(id) => {
@@ -560,6 +609,7 @@ export default function ChatGPTApp() {
         onRenameChat={handleRenameChat}
         onTogglePin={handleTogglePin}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenAuth={() => setAuthModalOpen(true)}
       />
 
       {/* Main Chat Viewport */}
@@ -573,6 +623,7 @@ export default function ChatGPTApp() {
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onNewChat={handleNewChat}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenAuth={() => setAuthModalOpen(true)}
           apiConnected={apiConnected}
           models={availableModels}
         />
@@ -608,7 +659,7 @@ export default function ChatGPTApp() {
         {showScrollBottom && (
           <button
             onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-28 right-8 p-2 rounded-full bg-[#2f2f2f] border border-[#424242] shadow-xl text-[#ececec] hover:bg-[#383838] transition-all hover:scale-110 z-20"
+            className="absolute bottom-24 sm:bottom-28 right-4 sm:right-8 p-2 rounded-full bg-[#2f2f2f] border border-[#424242] shadow-xl text-[#ececec] hover:bg-[#383838] transition-all hover:scale-110 z-20"
             title="Scroll to bottom"
           >
             <ArrowDown className="w-4 h-4" />
@@ -640,6 +691,12 @@ export default function ChatGPTApp() {
         onClearAllChats={handleClearAllChats}
         onExportChats={handleExportChats}
         isFirebaseConfigured={isFirebaseConfigured}
+      />
+
+      {/* Authentication Modal (Login / Sign Up) */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth, GoogleAuthProvider } from 'firebase/auth';
 
 /**
  * Sanitize env values by stripping any copied quotes, commas, or semicolons
@@ -27,14 +28,18 @@ export const isFirebaseConfigured = Boolean(
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let auth: Auth | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
 
 if (isFirebaseConfigured) {
   try {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     db = getFirestore(app);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
   } catch (error) {
     console.error('Failed to initialize Firebase:', error);
   }
 }
 
-export { app, db };
+export { app, db, auth, googleProvider };
