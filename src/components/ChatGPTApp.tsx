@@ -92,33 +92,23 @@ export default function ChatGPTApp() {
   useEffect(() => {
     if (!isClientLoaded) return;
 
-    if (isFirebaseConfigured) {
-      const currentUid = user && !user.isAnonymous ? user.uid : null;
-      loadChatsFromFirestore(currentUid)
+    const isLoggedIn = user && !user.isAnonymous;
+
+    if (isFirebaseConfigured && isLoggedIn) {
+      // Logged-in user: load from their private Firestore collection
+      loadChatsFromFirestore(user.uid)
         .then((firestoreChats) => {
           if (firestoreChats && firestoreChats.length > 0) {
             setChats(firestoreChats);
             setActiveChatId(firestoreChats[0].id);
           } else {
-            // Check fallback localStorage if user has no chats yet
-            const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
-            if (savedChats) {
-              try {
-                const parsedChats = JSON.parse(savedChats);
-                if (Array.isArray(parsedChats) && parsedChats.length > 0) {
-                  setChats(parsedChats);
-                  setActiveChatId(parsedChats[0].id);
-                }
-              } catch {}
-            } else {
-              setChats([]);
-              setActiveChatId(null);
-            }
+            setChats([]);
+            setActiveChatId(null);
           }
         })
         .catch((err) => console.warn('Could not load chats from Firestore:', err));
     } else {
-      // Fallback to localStorage only if Firebase credentials are not in .env yet
+      // Guest user / not logged in: use localStorage only (private per browser)
       const savedChats = localStorage.getItem(STORAGE_KEY_CHATS);
       if (savedChats) {
         try {
@@ -126,8 +116,17 @@ export default function ChatGPTApp() {
           if (Array.isArray(parsedChats) && parsedChats.length > 0) {
             setChats(parsedChats);
             setActiveChatId(parsedChats[0].id);
+          } else {
+            setChats([]);
+            setActiveChatId(null);
           }
-        } catch {}
+        } catch {
+          setChats([]);
+          setActiveChatId(null);
+        }
+      } else {
+        setChats([]);
+        setActiveChatId(null);
       }
     }
   }, [user, isClientLoaded]);
@@ -150,10 +149,12 @@ export default function ChatGPTApp() {
       .catch((err) => console.warn('Could not load dynamic models:', err));
   }, [apiKey]);
 
-  // Persist chats to localStorage only when Firebase is not configured or user is guest
+  // Persist chats to localStorage for guest users (logged-in users use Firestore)
   useEffect(() => {
     if (!isClientLoaded) return;
-    if (!isFirebaseConfigured || !user || user.isAnonymous) {
+    const isLoggedIn = user && !user.isAnonymous;
+    if (!isLoggedIn) {
+      // Guest: save to localStorage (private per browser, no one else can see)
       localStorage.setItem(STORAGE_KEY_CHATS, JSON.stringify(chats));
     }
   }, [chats, user, isClientLoaded]);
@@ -186,6 +187,9 @@ export default function ChatGPTApp() {
       })
       .catch(() => setApiConnected(false));
   }, [apiKey]);
+
+  // Helper: only logged-in (non-anonymous) users get Firestore persistence
+  const firestoreUid = user && !user.isAnonymous ? user.uid : null;
 
   // Current active chat object
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
@@ -221,11 +225,11 @@ export default function ChatGPTApp() {
       updatedAt: new Date().toISOString(),
       model: selectedModelId,
       messages: [],
-      userId: user && !user.isAnonymous ? user.uid : undefined,
+      userId: firestoreUid || undefined,
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
-    saveChatToFirestore(newChat, user && !user.isAnonymous ? user.uid : null);
+    saveChatToFirestore(newChat, firestoreUid);
   };
 
   // Delete a chat
@@ -235,7 +239,7 @@ export default function ChatGPTApp() {
       const remaining = chats.filter((c) => c.id !== chatId);
       setActiveChatId(remaining.length > 0 ? remaining[0].id : null);
     }
-    deleteChatFromFirestore(chatId, user && !user.isAnonymous ? user.uid : null);
+    deleteChatFromFirestore(chatId, firestoreUid);
   };
 
   // Rename a chat
@@ -244,7 +248,7 @@ export default function ChatGPTApp() {
       prev.map((c) => {
         if (c.id === chatId) {
           const updated = { ...c, title: newTitle, updatedAt: new Date().toISOString() };
-          saveChatToFirestore(updated, user && !user.isAnonymous ? user.uid : null);
+          saveChatToFirestore(updated, firestoreUid);
           return updated;
         }
         return c;
@@ -258,7 +262,7 @@ export default function ChatGPTApp() {
       prev.map((c) => {
         if (c.id === chatId) {
           const updated = { ...c, pinned: !c.pinned };
-          saveChatToFirestore(updated, user && !user.isAnonymous ? user.uid : null);
+          saveChatToFirestore(updated, firestoreUid);
           return updated;
         }
         return c;
@@ -298,7 +302,7 @@ export default function ChatGPTApp() {
         updatedAt: new Date().toISOString(),
         model: selectedModelId,
         messages: [],
-        userId: user && !user.isAnonymous ? user.uid : undefined,
+        userId: firestoreUid || undefined,
       };
       setChats((prev) => [newChat, ...prev]);
       setActiveChatId(newChat.id);
@@ -339,13 +343,13 @@ export default function ChatGPTApp() {
       title: newTitle,
       updatedAt: new Date().toISOString(),
       messages: updatedMessages,
-      userId: user && !user.isAnonymous ? user.uid : currentChat.userId,
+      userId: firestoreUid || currentChat.userId,
     };
 
     setChats((prev) =>
       prev.map((c) => (c.id === targetChatId ? updatedChatObj : c))
     );
-    saveChatToFirestore(updatedChatObj, user && !user.isAnonymous ? user.uid : null);
+    saveChatToFirestore(updatedChatObj, firestoreUid);
 
     setIsStreaming(true);
     setTimeout(() => scrollToBottom('smooth'), 50);
@@ -517,7 +521,7 @@ export default function ChatGPTApp() {
       setChats((current) => {
         const completed = current.find((c) => c.id === targetChatId);
         if (completed) {
-          saveChatToFirestore(completed, user && !user.isAnonymous ? user.uid : null);
+          saveChatToFirestore(completed, firestoreUid);
         }
         return current;
       });
@@ -586,7 +590,7 @@ export default function ChatGPTApp() {
 
   // Clear all chats
   const handleClearAllChats = () => {
-    clearAllChatsFromFirestore(chats, user && !user.isAnonymous ? user.uid : null);
+    clearAllChatsFromFirestore(chats, firestoreUid);
     setChats([]);
     setActiveChatId(null);
   };

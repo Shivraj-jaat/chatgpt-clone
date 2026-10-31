@@ -31,25 +31,21 @@ function sanitizeForFirestore(val: any): any {
 }
 
 /**
- * Get the Firestore collection reference depending on whether user is logged in
+ * Get the Firestore collection reference — ONLY for logged-in users.
+ * Returns null if no userId (guest users use localStorage, not Firestore).
  */
 function getChatsCollection(userId?: string | null): CollectionReference | null {
-  if (!db) return null;
-  if (userId) {
-    return collection(db, 'users', userId, 'chats');
-  }
-  return collection(db, 'chats');
+  if (!db || !userId) return null;
+  return collection(db, 'users', userId, 'chats');
 }
 
 /**
- * Get the Firestore document reference for a chat
+ * Get the Firestore document reference for a chat — ONLY for logged-in users.
+ * Returns null if no userId (guest users use localStorage, not Firestore).
  */
 function getChatDocRef(chatId: string, userId?: string | null): DocumentReference | null {
-  if (!db) return null;
-  if (userId) {
-    return doc(db, 'users', userId, 'chats', chatId);
-  }
-  return doc(db, 'chats', chatId);
+  if (!db || !userId) return null;
+  return doc(db, 'users', userId, 'chats', chatId);
 }
 
 /**
