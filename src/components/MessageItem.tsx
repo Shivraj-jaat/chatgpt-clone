@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { 
   Copy, 
   Check, 
@@ -137,6 +138,7 @@ export default function MessageItem({
                 onClick={() => setIsEditing(true)}
                 className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[#2f2f2f] text-[#8e8e8e] hover:text-[#ececec] transition-opacity"
                 title="Edit message"
+                aria-label="Edit message"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -309,6 +311,7 @@ export default function MessageItem({
                   onClick={handleCopy}
                   className="p-1.5 rounded hover:bg-[#2f2f2f] text-[#8e8e8e] hover:text-[#ececec] transition-colors"
                   title="Copy message"
+                  aria-label="Copy message"
                 >
                   {copied ? (
                     <Check className="w-4 h-4 text-emerald-400" />
@@ -322,6 +325,7 @@ export default function MessageItem({
                   onClick={handleSpeech}
                   className="p-1.5 rounded hover:bg-[#2f2f2f] text-[#8e8e8e] hover:text-[#ececec] transition-colors"
                   title={isSpeaking ? 'Stop speaking' : 'Read aloud'}
+                  aria-label={isSpeaking ? 'Stop speaking' : 'Read aloud'}
                 >
                   {isSpeaking ? (
                     <VolumeX className="w-4 h-4 text-emerald-400 animate-pulse" />
@@ -336,6 +340,7 @@ export default function MessageItem({
                     onClick={onRegenerate}
                     className="p-1.5 rounded hover:bg-[#2f2f2f] text-[#8e8e8e] hover:text-[#ececec] transition-colors"
                     title="Regenerate response"
+                    aria-label="Regenerate response"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
@@ -348,6 +353,7 @@ export default function MessageItem({
                     feedback === 'like' ? 'text-emerald-400' : 'text-[#8e8e8e] hover:text-[#ececec]'
                   }`}
                   title="Good response"
+                  aria-label="Good response"
                 >
                   <ThumbsUp className="w-4 h-4" />
                 </button>
@@ -357,6 +363,7 @@ export default function MessageItem({
                     feedback === 'dislike' ? 'text-red-400' : 'text-[#8e8e8e] hover:text-[#ececec]'
                   }`}
                   title="Bad response"
+                  aria-label="Bad response"
                 >
                   <ThumbsDown className="w-4 h-4" />
                 </button>

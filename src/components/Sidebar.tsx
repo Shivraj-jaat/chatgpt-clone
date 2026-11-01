@@ -133,6 +133,7 @@ export default function Sidebar({
 
       {/* Main Sidebar Drawer */}
       <aside
+        aria-label="Chat history sidebar"
         className={`fixed inset-y-0 left-0 z-50 w-72 md:relative md:w-[260px] flex-shrink-0 flex flex-col h-full bg-[#171717] border-r border-[#282828] select-none text-sm transition-transform duration-200 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:hidden'
         }`}
@@ -158,6 +159,7 @@ export default function Sidebar({
               onClick={onClose}
               className="p-2 rounded-xl bg-[#212121] text-[#8e8e8e] hover:text-white border border-[#333333] md:hidden transition-colors"
               title="Close sidebar"
+              aria-label="Close sidebar"
             >
               <X className="w-4 h-4" />
             </button>
@@ -171,12 +173,14 @@ export default function Sidebar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search chats..."
+              aria-label="Search chats"
               className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[#212121] text-xs text-[#ececec] placeholder-[#8e8e8e] border border-[#333333] focus:border-[#4f4f4f] focus:outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-2 text-[#8e8e8e] hover:text-white"
+                aria-label="Clear search"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -220,11 +224,13 @@ export default function Sidebar({
                               if (e.key === 'Escape') setEditingChatId(null);
                             }}
                             autoFocus
+                            aria-label="Edit chat title"
                             className="flex-1 bg-[#171717] px-2 py-0.5 text-xs text-white border border-[#10a37f] rounded focus:outline-none"
                           />
                           <button
                             onClick={(e) => handleSaveRename(chat.id, e)}
                             className="p-1 text-emerald-400 hover:text-white"
+                            aria-label="Save new title"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
@@ -234,6 +240,7 @@ export default function Sidebar({
                               setEditingChatId(null);
                             }}
                             className="p-1 text-[#8e8e8e] hover:text-white"
+                            aria-label="Cancel rename"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -260,6 +267,7 @@ export default function Sidebar({
                                 chat.pinned ? 'text-amber-400' : 'text-[#8e8e8e] hover:text-white'
                               }`}
                               title={chat.pinned ? 'Unpin' : 'Pin to top'}
+                              aria-label={chat.pinned ? 'Unpin chat' : 'Pin chat to top'}
                             >
                               <Pin className="w-3.5 h-3.5" />
                             </button>
@@ -267,6 +275,7 @@ export default function Sidebar({
                               onClick={(e) => handleStartRename(chat, e)}
                               className="p-1 rounded hover:bg-[#2f2f2f] text-[#8e8e8e] hover:text-white transition-colors"
                               title="Rename"
+                              aria-label="Rename chat"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
@@ -277,6 +286,7 @@ export default function Sidebar({
                               }}
                               className="p-1 rounded hover:bg-[#2f2f2f] text-[#8e8e8e] hover:text-red-400 transition-colors"
                               title="Delete"
+                              aria-label="Delete chat"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

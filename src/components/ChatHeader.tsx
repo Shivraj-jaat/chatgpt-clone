@@ -89,6 +89,7 @@ export default function ChatHeader({
           onClick={onToggleSidebar}
           className="p-2 rounded-lg text-[#b4b4b4] hover:text-white hover:bg-[#2f2f2f] transition-colors active:scale-95"
           title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
         >
           <PanelLeft className="w-5 h-5" />
         </button>
@@ -98,6 +99,8 @@ export default function ChatHeader({
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#2f2f2f] transition-colors text-xs sm:text-sm font-semibold text-[#ececec] max-w-[200px] sm:max-w-none"
+            aria-label="Select AI model"
+            aria-expanded={dropdownOpen}
           >
             <span className="truncate">{currentModel.name}</span>
             <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8e8e8e] flex-shrink-0" />
@@ -175,6 +178,7 @@ export default function ChatHeader({
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="flex items-center gap-1.5 p-1 rounded-full hover:bg-[#2f2f2f] transition-colors"
               title={user.displayName || user.email || 'User Account'}
+              aria-label={`Account menu for ${user.displayName || user.email || 'User'}`}
             >
               {user.photoURL ? (
                 <img
@@ -229,6 +233,7 @@ export default function ChatHeader({
             onClick={onOpenAuth}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#10a37f] hover:bg-[#0e8e6e] text-white text-xs font-medium transition-colors shadow-sm active:scale-95"
             title="Log In / Sign Up"
+            aria-label="Log In or Sign Up"
           >
             <LogIn className="w-3.5 h-3.5" />
             <span className="hidden xs:inline">Sign In</span>
@@ -240,6 +245,7 @@ export default function ChatHeader({
           onClick={onNewChat}
           className="p-2 rounded-lg text-[#b4b4b4] hover:text-white hover:bg-[#2f2f2f] transition-colors active:scale-95"
           title="New Chat"
+          aria-label="New Chat"
         >
           <SquarePen className="w-5 h-5" />
         </button>
@@ -249,6 +255,7 @@ export default function ChatHeader({
           onClick={onOpenSettings}
           className="p-2 rounded-lg text-[#b4b4b4] hover:text-white hover:bg-[#2f2f2f] transition-colors active:scale-95"
           title="Settings"
+          aria-label="Settings"
         >
           <SettingsIcon className="w-5 h-5" />
         </button>

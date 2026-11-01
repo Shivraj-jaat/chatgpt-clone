@@ -1,13 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Sidebar from './Sidebar';
 import ChatHeader from './ChatHeader';
-import MessageItem from './MessageItem';
 import ChatInput from './ChatInput';
 import EmptyState from './EmptyState';
-import SettingsModal from './SettingsModal';
-import AuthModal from './AuthModal';
+
+const MessageItem = dynamic(() => import('./MessageItem'), {
+  ssr: false,
+  loading: () => (
+    <div className="py-4 px-4 text-xs text-[#8e8e8e] animate-pulse">Loading conversation...</div>
+  ),
+});
+const SettingsModal = dynamic(() => import('./SettingsModal'), { ssr: false });
+const AuthModal = dynamic(() => import('./AuthModal'), { ssr: false });
 import { MODELS, DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { Chat, Message, Attachment, Model } from '../types';
 import { ArrowDown } from 'lucide-react';
@@ -618,7 +625,7 @@ export default function ChatGPTApp() {
       />
 
       {/* Main Chat Viewport */}
-      <div className="flex-1 flex flex-col h-full min-w-0 relative">
+      <main className="flex-1 flex flex-col h-full min-w-0 relative">
         
         {/* Top Header */}
         <ChatHeader
@@ -666,6 +673,7 @@ export default function ChatGPTApp() {
             onClick={() => scrollToBottom('smooth')}
             className="absolute bottom-24 sm:bottom-28 right-4 sm:right-8 p-2 rounded-full bg-[#2f2f2f] border border-[#424242] shadow-xl text-[#ececec] hover:bg-[#383838] transition-all hover:scale-110 z-20"
             title="Scroll to bottom"
+            aria-label="Scroll to bottom"
           >
             <ArrowDown className="w-4 h-4" />
           </button>
@@ -679,7 +687,7 @@ export default function ChatGPTApp() {
           selectedModel={selectedModelId}
           apiKey={apiKey}
         />
-      </div>
+      </main>
 
       {/* Settings Modal */}
       <SettingsModal

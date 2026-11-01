@@ -255,6 +255,7 @@ export default function ChatInput({
                   onClick={() => removeAttachment(idx)}
                   className="p-0.5 rounded-full hover:bg-[#383838] text-[#8e8e8e] hover:text-white transition-colors"
                   title="Remove attachment"
+                  aria-label={`Remove attachment ${att.name || idx + 1}`}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -279,6 +280,7 @@ export default function ChatInput({
             onClick={() => fileInputRef.current?.click()}
             className="p-2 mb-0.5 rounded-full text-[#b4b4b4] hover:text-white hover:bg-[#383838] transition-colors flex-shrink-0 active:scale-95"
             title="Attach images (Auto-compressed for minimum tokens) or documents"
+            aria-label="Attach file"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -294,6 +296,7 @@ export default function ChatInput({
                 ? 'Listening with Groq Whisper... Click mic to stop.'
                 : 'Message ChatGPT...'
             }
+            aria-label="Message ChatGPT"
             rows={1}
             className="flex-1 max-h-[160px] sm:max-h-[200px] py-1.5 px-2 bg-transparent text-[#ececec] placeholder-[#8e8e8e] text-sm sm:text-[15px] resize-none focus:outline-none leading-relaxed"
           />
@@ -310,6 +313,7 @@ export default function ChatInput({
                   : 'text-[#8e8e8e] hover:text-white hover:bg-[#383838]'
               }`}
               title={useWebSearch ? 'Web Search active' : 'Toggle Web Search'}
+              aria-label={useWebSearch ? 'Disable Web Search' : 'Enable Web Search'}
             >
               <Globe className="w-4 h-4" />
             </button>
@@ -324,6 +328,7 @@ export default function ChatInput({
                   : 'text-[#8e8e8e] hover:text-white hover:bg-[#383838]'
               }`}
               title={isRecording ? 'Stop recording' : 'Voice input (Groq Whisper)'}
+              aria-label={isRecording ? 'Stop voice recording' : 'Start voice input with Groq Whisper'}
             >
               {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
@@ -335,6 +340,7 @@ export default function ChatInput({
                 onClick={onStopStreaming}
                 className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-md"
                 title="Stop generation"
+                aria-label="Stop generation"
               >
                 <Square className="w-3.5 h-3.5 fill-black" />
               </button>
@@ -349,6 +355,7 @@ export default function ChatInput({
                     : 'bg-[#424242] text-[#8e8e8e] cursor-not-allowed'
                 }`}
                 title="Send message"
+                aria-label="Send message"
               >
                 <ArrowUp className="w-4 h-4 stroke-[2.5]" />
               </button>
