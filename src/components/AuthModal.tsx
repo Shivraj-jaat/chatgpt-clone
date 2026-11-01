@@ -37,6 +37,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Au
         return 'Please enter a valid email address.';
       case 'auth/popup-closed-by-user':
         return 'Sign-in popup was closed before completing.';
+      case 'auth/unauthorized-domain':
+        return 'This domain is not authorized in Firebase Console. Please access via http://localhost:3000, or add your current domain under Firebase Console -> Authentication -> Settings -> Authorized domains.';
       case 'auth/operation-not-allowed':
         return 'This sign-in method is not enabled in Firebase Console (Authentication > Sign-in method).';
       default:
