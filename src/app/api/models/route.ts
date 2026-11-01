@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 import { KNOWN_MODELS, DEFAULT_FALLBACK_MODELS } from '@/constants';
 import { Model } from '@/types';
+import { rateLimiter, getClientIp } from '@/lib/rateLimit';
 
 function getGroqClient(clientKey?: string | null): Groq | null {
   const apiKey = clientKey || process.env.GROQ_API_KEY;
@@ -11,37 +12,78 @@ function getGroqClient(clientKey?: string | null): Groq | null {
   return new Groq({ apiKey });
 }
 
+// In-memory cache for dynamic model listing
+let cachedModelsResponse: {
+  data: { models: Model[]; availableGroqModelIds: string[]; count: number };
+  expiresAt: number;
+} | null = null;
+
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
 export async function GET(req: NextRequest) {
+  const requestId = crypto.randomUUID();
   const clientKey = req.headers.get('x-groq-api-key');
+  const clientIp = getClientIp(req.headers);
+
+  // Rate limiting: 60 req/min for models
+  const rateCheck = rateLimiter.check(`models_${clientIp}`, { maxRequests: 60, windowMs: 60_000 });
+  const rateHeaders = {
+    'X-Request-Id': requestId,
+    'X-RateLimit-Limit': String(rateCheck.limit),
+    'X-RateLimit-Remaining': String(rateCheck.remaining),
+    'X-RateLimit-Reset': String(rateCheck.resetTime),
+  };
+
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded for model catalog.', requestId },
+      { status: 429, headers: rateHeaders }
+    );
+  }
+
+  // Return cached result if available and using shared server credentials
+  const now = Date.now();
+  if (!clientKey && cachedModelsResponse && cachedModelsResponse.expiresAt > now) {
+    return NextResponse.json(cachedModelsResponse.data, { headers: rateHeaders });
+  }
+
   const groq = getGroqClient(clientKey);
 
   if (!groq) {
-    return NextResponse.json({
-      models: DEFAULT_FALLBACK_MODELS,
-      availableGroqModelIds: [],
-    });
+    return NextResponse.json(
+      {
+        models: DEFAULT_FALLBACK_MODELS,
+        availableGroqModelIds: [],
+        requestId,
+      },
+      { headers: rateHeaders }
+    );
   }
 
   try {
     const list = await groq.models.list();
     const liveIds: string[] = list.data.map((m: any) => m.id);
 
-    // Filter out non-chat models (guards, safeguards, whisper audio, TTS/orpheus)
+    // Filter out non-chat models
     const chatModelIds = liveIds.filter((id) => {
       const lower = id.toLowerCase();
       if (lower.includes('whisper')) return false;
       if (lower.includes('guard')) return false;
       if (lower.includes('embed')) return false;
-      if (lower.includes('orpheus')) return false; // TTS/audio model, not chat
+      if (lower.includes('orpheus')) return false;
       if (lower.includes('tts')) return false;
       return true;
     });
 
     if (chatModelIds.length === 0) {
-      return NextResponse.json({
-        models: DEFAULT_FALLBACK_MODELS,
-        availableGroqModelIds: liveIds,
-      });
+      return NextResponse.json(
+        {
+          models: DEFAULT_FALLBACK_MODELS,
+          availableGroqModelIds: liveIds,
+          requestId,
+        },
+        { headers: rateHeaders }
+      );
     }
 
     // Sort: preferred high-TPM models first
@@ -50,13 +92,15 @@ export async function GET(req: NextRequest) {
       'openai/gpt-oss-20b',
       'allam-2-7b',
       'openai/gpt-oss-120b',
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
     ];
+
     const sortedModelIds = [
       ...PREFERRED_ORDER.filter((p) => chatModelIds.includes(p)),
       ...chatModelIds.filter((id) => !PREFERRED_ORDER.includes(id)),
     ];
 
-    // Build rich model cards for every available model
     const dynamicModels: Model[] = sortedModelIds.map((id, index) => {
       const known = KNOWN_MODELS[id];
       if (known) {
@@ -75,7 +119,6 @@ export async function GET(req: NextRequest) {
         };
       }
 
-      // Fallback formatting for any new or custom Groq model
       const isLarge = id.includes('70b') || id.includes('120b');
       return {
         id,
@@ -94,17 +137,31 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({
+    const responsePayload = {
       models: dynamicModels,
       availableGroqModelIds: liveIds,
       count: dynamicModels.length,
-    });
+    };
+
+    // Store in cache for shared requests
+    if (!clientKey) {
+      cachedModelsResponse = {
+        data: responsePayload,
+        expiresAt: now + CACHE_TTL_MS,
+      };
+    }
+
+    return NextResponse.json(responsePayload, { headers: rateHeaders });
   } catch (error: any) {
-    console.warn('Failed to list live Groq models:', error?.message);
-    return NextResponse.json({
-      models: DEFAULT_FALLBACK_MODELS,
-      availableGroqModelIds: [],
-      error: error?.message,
-    });
+    console.warn('[Models Route] Failed to list live Groq models:', error?.message);
+    return NextResponse.json(
+      {
+        models: DEFAULT_FALLBACK_MODELS,
+        availableGroqModelIds: [],
+        error: error?.message,
+        requestId,
+      },
+      { headers: rateHeaders }
+    );
   }
 }

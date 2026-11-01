@@ -288,6 +288,7 @@ export default function ChatGPTApp() {
     attachments?: Attachment[];
     useWebSearch?: boolean;
   }) => {
+    if (isStreaming) return;
     if (!content.trim() && attachments.length === 0) return;
 
     let targetChatId = activeChatId;

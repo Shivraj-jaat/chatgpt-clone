@@ -34,6 +34,7 @@ export default function ChatInput({
   const [isRecording, setIsRecording] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [useWebSearch, setUseWebSearch] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -54,7 +55,11 @@ export default function ChatInput({
       return;
     }
 
+    if (isSubmitting) return;
     if (!text.trim() && attachments.length === 0) return;
+
+    setIsSubmitting(true);
+    setTimeout(() => setIsSubmitting(false), 500);
 
     let finalPrompt = text.trim();
     if (useWebSearch) {
