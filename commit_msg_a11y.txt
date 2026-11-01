@@ -1,1 +1,0 @@
-perf & a11y: optimize FCP/LCP, defer KaTeX CSS, add main landmark & comprehensive aria-labels
